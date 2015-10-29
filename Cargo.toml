@@ -1,0 +1,8 @@
+[package]
+authors = ["Norbert Pozar <bertapozar@gmail.com>"]
+name = "annulus_mesh"
+version = "0.1.0"
+
+[dependencies]
+gnuplot = "0.0.18"
+rand = "0.3.11"
