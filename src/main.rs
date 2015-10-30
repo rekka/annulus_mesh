@@ -61,11 +61,11 @@ fn main() {
     let mut ps = vec![];
     let mut active: Vec<(f64, f64)> = vec![];
 
-    let r1 = 0.1;
+    let r1 = 0.2;
     let r2 = 1.;
     let n_gen = 50;
 
-    let h = 0.05;
+    let h = 0.025;
     let mean_dist_ratio = 0.7;
 
     let k1 = (mean_dist_ratio * 2. * PI * r1 / h).round() as i32;
@@ -121,6 +121,7 @@ fn main() {
     let indices = qhull_triangulation(&ps);
 
     let mut fg = Figure::new();
+    fg.set_terminal("pngcairo size 720, 720", "/tmp/delaunay.png");
     // fg.clear_axes();
     // fg.axes2d()
     //     .set_aspect_ratio(Fix(1.))
