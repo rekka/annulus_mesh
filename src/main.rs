@@ -145,11 +145,11 @@ fn main() {
 
         if let Some(p) = annulus_dist.ind_iter(&mut rng)
                                      .map(|p| p + c)
+                                     .take(n_gen)
                                      .filter(|&p| {
                                          let d = dist(p, Point(0., 0.));
                                          r1 <= d && d <= r2
                                      })
-                                     .take(n_gen)
                                      .filter(|&p| ps.iter().all(|&q| dist(p, q) >= h))
                                      .next() {
             ps.push(p);
