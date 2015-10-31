@@ -1,4 +1,5 @@
-//! Uniform point distribution in an annulus using Bridson’s algorithm for Poisson-disc sampling
+//! Uniform point distribution in an annulus using Bridson’s algorithm for
+//! Poisson-disc sampling
 //! from [Visualizing Algorithms](http://bost.ocks.org/mike/algorithms/).
 //!
 //! Uses [qhull](http://qhull.org/) to generate a Delaunay triangulation.
@@ -8,19 +9,22 @@ extern crate rustc_serialize;
 extern crate gnuplot;
 extern crate mersenne_twister;
 
+mod annulus_distribution;
+
 use std::f64::consts::PI;
 #[allow(unused_imports)]
 use gnuplot::{Figure, Caption, Color, Fix, AxesCommon, PlotOption, DashType, Coordinate, TextColor};
 use rand::{Rng, SeedableRng};
-use rand::distributions::{IndependentSample, Range};
 use std::io::{Read, Write, Cursor, BufRead};
 use std::process::{Command, Stdio};
 use docopt::Docopt;
 use mersenne_twister::MT19937_64;
+use std::ops::Add;
+use annulus_distribution::AnnulusDist;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-static USAGE: &'static str = "
+static USAGE: &'static str = r"
 Simple wave equation solver.
 Usage: annulus_mesh [options]
        annulus_mesh (-h | --help | --version)
@@ -42,25 +46,38 @@ struct Args {
     flag_plot: Option<String>,
 }
 
-fn dist(x: (f64, f64), y: (f64, f64)) -> f64 {
+#[derive(Copy, Clone, Debug)]
+pub struct Point(f64, f64);
+
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Point(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+fn dist_sq(x: Point, y: Point) -> f64 {
+    (x.0 - y.0).powi(2) + (x.1 - y.1).powi(2)
+}
+
+fn dist(x: Point, y: Point) -> f64 {
     ((x.0 - y.0).powi(2) + (x.1 - y.1).powi(2)).sqrt()
 }
 
-fn qhull_triangulation(ps: &[(f64, f64)]) -> Vec<Vec<usize>> {
+fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
     let mut process = Command::new("qhull")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .arg("d")
-        .arg("i")
-        .spawn()
-        .unwrap_or_else(|e|
-            panic!("couldn't spawn qhull: {:?}", e)
-        );
+                          .stdin(Stdio::piped())
+                          .stdout(Stdio::piped())
+                          .arg("d")
+                          .arg("i")
+                          .spawn()
+                          .unwrap_or_else(|e| panic!("couldn't spawn qhull: {:?}", e));
 
     if let Some(ref mut out) = process.stdin {
         writeln!(out, "2\n{}", ps.len()).unwrap();
 
-        for &(x,y) in ps {
+        for &Point(x, y) in ps {
             writeln!(out, "{} {}", x, y).unwrap();
         }
     }
@@ -86,18 +103,18 @@ fn qhull_triangulation(ps: &[(f64, f64)]) -> Vec<Vec<usize>> {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                  .and_then(|d| d.version(Some(VERSION.to_string())).decode())
-                  .unwrap_or_else(|e| e.exit());
+                         .and_then(|d| d.version(Some(VERSION.to_string())).decode())
+                         .unwrap_or_else(|e| e.exit());
 
     let seed: u64 = 0;
     let mut rng: MT19937_64 = SeedableRng::from_seed(seed);
 
     let mut ps = vec![];
-    let mut active: Vec<(f64, f64)> = vec![];
+    let mut active: Vec<Point> = vec![];
 
     let r1 = args.flag_r;
     let r2 = 1.;
-    let n_gen = 50;
+    let n_gen = 30;
 
     let h = args.flag_d;
     let mean_dist_ratio = 0.7;
@@ -108,8 +125,8 @@ fn main() {
     // generate boundary points
     for &(k, r) in &[(k1, r1), (k2, r2)] {
         for i in 0..k {
-            ps.push((r * (2. * PI * i as f64 / k as f64).cos(),
-                    r * (2. * PI * i as f64 / k as f64).sin()));
+            let (y, x) = (2. * PI * i as f64 / k as f64).sin_cos();
+            ps.push(Point(r * x, r * y));
         }
     }
 
@@ -118,42 +135,26 @@ fn main() {
 
     let n_fixed = ps.len();
 
-    let x_range = Range::new(h * h, 4. * h * h);
-    let theta_range = Range::new(0., 2. * PI);
+    let annulus_dist = AnnulusDist::new(h, 2.0 * h);
 
     while !active.is_empty() {
         // select a random active point
         let i = rng.gen_range(0, active.len());
 
         let c = active[i];
-        let mut deactivate = true;
 
-        for _ in 0..n_gen {
-            let mut p;
-
-            // generate a random point in an annulus [h, 2h] of the active point
-            loop {
-                let r = x_range.ind_sample(&mut rng).sqrt();
-                let theta = theta_range.ind_sample(&mut rng);
-
-                p = (r * theta.cos() + c.0, r * theta.sin() + c.1);
-                let d = dist(p, (0., 0.));
-
-                // make sure it lies in the domain
-                if r1 <= d && d <= r2 {
-                    break;
-                }
-            }
-
-            if ps.iter().all(|&q| dist(p, q) >= h) {
-                ps.push(p);
-                active.push(p);
-                deactivate = false;
-                break;
-            }
-        }
-
-        if deactivate {
+        if let Some(p) = annulus_dist.ind_iter(&mut rng)
+                                     .map(|p| p + c)
+                                     .filter(|&p| {
+                                         let d = dist(p, Point(0., 0.));
+                                         r1 <= d && d <= r2
+                                     })
+                                     .take(n_gen)
+                                     .filter(|&p| ps.iter().all(|&q| dist(p, q) >= h))
+                                     .next() {
+            ps.push(p);
+            active.push(p);
+        } else {
             active.remove(i);
         }
 
@@ -191,13 +192,15 @@ fn main() {
                 y += ps[j].1;
             }
             let n = neighbors[i].len() as f64;
-            let (x0, y0) = ps[i];
-            let (x1, y1) = (x / n, y / n);
-            ps[i] = (x1, y1);
-            change += (x0 - x1).powi(2) + (y0 - y1).powi(2);
+            let p = ps[i];
+            let q = Point(x / n, y / n);
+            ps[i] = q;
+            change += dist_sq(p, q);
         }
 
-        if change.sqrt() < laplace_eps { break; }
+        if change.sqrt() < laplace_eps {
+            break;
+        }
     }
 
     if !args.flag_no_show {
@@ -212,7 +215,8 @@ fn main() {
             axes.set_aspect_ratio(Fix(1.));
             for poly in indices {
                 axes.lines(poly.iter().cycle().take(poly.len() + 1).map(|&i| ps[i as usize].0),
-                        poly.iter().cycle().take(poly.len() + 1).map(|&i| ps[i as usize].1), &[]);
+                           poly.iter().cycle().take(poly.len() + 1).map(|&i| ps[i as usize].1),
+                           &[]);
             }
         }
 
