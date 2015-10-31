@@ -6,15 +6,17 @@ extern crate docopt;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate gnuplot;
+extern crate mersenne_twister;
 
 use std::f64::consts::PI;
 #[allow(unused_imports)]
 use gnuplot::{Figure, Caption, Color, Fix, AxesCommon, PlotOption, DashType, Coordinate, TextColor};
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use rand::distributions::{IndependentSample, Range};
 use std::io::{Read, Write, Cursor, BufRead};
 use std::process::{Command, Stdio};
 use docopt::Docopt;
+use mersenne_twister::MT19937_64;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -87,7 +89,8 @@ fn main() {
                   .and_then(|d| d.version(Some(VERSION.to_string())).decode())
                   .unwrap_or_else(|e| e.exit());
 
-    let mut rng = rand::thread_rng();
+    let seed: u64 = 0;
+    let mut rng: MT19937_64 = SeedableRng::from_seed(seed);
 
     let mut ps = vec![];
     let mut active: Vec<(f64, f64)> = vec![];
