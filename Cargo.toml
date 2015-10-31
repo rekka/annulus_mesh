@@ -2,6 +2,11 @@
 authors = ["Norbert Pozar <bertapozar@gmail.com>"]
 name = "annulus_mesh"
 version = "0.1.0"
+repository = "https://github.com/rekka/annulus_mesh.git"
+homepage = "https://github.com/rekka/annulus_mesh"
+license = "MIT"
+readme = "README.md"
+documentation = "https://rekka.github.io/annulus_mesh"
 
 [dependencies]
 docopt = "0.6.74"

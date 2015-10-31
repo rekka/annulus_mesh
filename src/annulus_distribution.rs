@@ -1,4 +1,5 @@
-//! Implementation of a uniform distribuition of points on a two-dimensional annulus.
+//! Implementation of a uniform distribuition of points on a two-dimensional
+//! annulus.
 use rand::{Closed01, Rng};
 use rand::distributions::{Sample, IndependentSample};
 use Point;

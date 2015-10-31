@@ -1,6 +1,10 @@
 //! Uniform point distribution in an annulus using Bridson’s algorithm for
-//! Poisson-disc sampling
-//! from [Visualizing Algorithms](http://bost.ocks.org/mike/algorithms/).
+//! Poisson-disc sampling.
+//!
+//! Bridson, Robert. "Fast Poisson disk sampling in arbitrary dimensions." ACM
+//! SIGGRAPH. Vol. 2007. 2007.
+//!
+//! See also [Visualizing Algorithms](http://bost.ocks.org/mike/algorithms/).
 //!
 //! Uses [qhull](http://qhull.org/) to generate a Delaunay triangulation.
 extern crate docopt;
@@ -25,7 +29,8 @@ use annulus_distribution::AnnulusDist;
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 static USAGE: &'static str = r"
-Simple wave equation solver.
+Simple annulus triangulation generator.
+
 Usage: annulus_mesh [options]
        annulus_mesh (-h | --help | --version)
 
