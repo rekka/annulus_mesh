@@ -124,11 +124,9 @@ fn main() {
     let h = args.flag_d;
     let mean_dist_ratio = 0.7;
 
-    let k1 = (mean_dist_ratio * 2. * PI * r1 / h).round() as i32;
-    let k2 = (mean_dist_ratio * 2. * PI * r2 / h).round() as i32;
-
     // generate boundary points
-    for &(k, r) in &[(k1, r1), (k2, r2)] {
+    for &r in &[r1, r2] {
+        let k = (mean_dist_ratio * 2. * PI * r / h).round() as i32;
         for i in 0..k {
             let (y, x) = (2. * PI * i as f64 / k as f64).sin_cos();
             ps.push(Point(r * x, r * y));
