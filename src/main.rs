@@ -62,12 +62,14 @@ impl Add for Point {
     }
 }
 
-fn dist_sq(x: Point, y: Point) -> f64 {
-    (x.0 - y.0).powi(2) + (x.1 - y.1).powi(2)
-}
+impl Point {
+    fn dist(self, y: Point) -> f64 {
+        self.dist_sq(y).sqrt()
+    }
 
-fn dist(x: Point, y: Point) -> f64 {
-    ((x.0 - y.0).powi(2) + (x.1 - y.1).powi(2)).sqrt()
+    fn dist_sq(self, y: Point) -> f64 {
+        (self.0 - y.0).powi(2) + (self.1 - y.1).powi(2)
+    }
 }
 
 fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
@@ -150,10 +152,10 @@ fn main() {
                                      .map(|p| p + c)
                                      .take(n_gen)
                                      .filter(|&p| {
-                                         let d = dist(p, Point(0., 0.));
+                                         let d = p.dist(Point(0., 0.));
                                          r1 <= d && d <= r2
                                      })
-                                     .filter(|&p| ps.iter().all(|&q| dist(p, q) >= h))
+                                     .filter(|&p| ps.iter().all(|&q| p.dist(q) >= h))
                                      .next() {
             ps.push(p);
             active.push(p);
@@ -198,7 +200,7 @@ fn main() {
             let p = ps[i];
             let q = Point(x / n, y / n);
             ps[i] = q;
-            change += dist_sq(p, q);
+            change += p.dist_sq(q);
         }
 
         if change.sqrt() < laplace_eps {

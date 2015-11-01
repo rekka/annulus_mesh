@@ -2,7 +2,7 @@
 //! annulus.
 use rand::{Closed01, Rng};
 use rand::distributions::{Sample, IndependentSample};
-use Point;
+pub use Point;
 use std::f64::consts::PI;
 
 /// The uniform distribution of 2D points on an annulus `{x: r_1 <= |x| <= r_2}`.
@@ -57,5 +57,21 @@ impl<'a, R: 'a + Rng> Iterator for AnnulusDistIterator<'a, R> {
 
     fn next(&mut self) -> Option<Self::Item> {
         Some(self.dist.ind_sample(self.rng))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_in_annulus() {
+        let r1 = 12.;
+        let r2 = 58.;
+
+        assert!(AnnulusDist::new(r1, r2).ind_iter(&mut ::rand::thread_rng()).take(1000).all(|p| {
+            let d = p.dist(Point(0., 0.));
+            r1 <= d && d <= r2
+        }));
     }
 }
