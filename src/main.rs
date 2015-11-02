@@ -14,17 +14,17 @@ extern crate gnuplot;
 extern crate mersenne_twister;
 
 mod annulus_distribution;
+pub mod blue_noise;
 
 use std::f64::consts::PI;
 #[allow(unused_imports)]
 use gnuplot::{Figure, Caption, Color, Fix, AxesCommon, PlotOption, DashType, Coordinate, TextColor};
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use std::io::{Read, Write, Cursor, BufRead};
 use std::process::{Command, Stdio};
 use docopt::Docopt;
 use mersenne_twister::MT19937_64;
 use std::ops::Add;
-use annulus_distribution::AnnulusDist;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -125,11 +125,9 @@ fn main() {
     let mut rng: MT19937_64 = SeedableRng::from_seed(seed);
 
     let mut ps = vec![];
-    let mut active: Vec<Point> = vec![];
 
     let r1 = args.flag_r;
     let r2 = 1.;
-    let n_gen = 30;
 
     let h = args.flag_d;
     let mean_dist_ratio = 0.7;
@@ -143,37 +141,24 @@ fn main() {
         }
     }
 
-    // make boundary points active
-    active.extend(&ps);
 
     let n_fixed = ps.len();
 
-    let annulus_dist = AnnulusDist::new(h, 2.0 * h);
 
-    while !active.is_empty() {
-        // select a random active point
-        let i = rng.gen_range(0, active.len());
+    blue_noise::generate_blue_noise_cull(&mut rng,
+                                         &mut ps,
+                                         h,
+                                         (Point(-r2, -r2), Point(r2, r2)),
+                                         |p| {
+                                             let d = p.dist(Point(0., 0.));
+                                             r1 <= d && d <= r2
+                                         });
 
-        let c = active[i];
-
-        if let Some(p) = annulus_dist.ind_iter(&mut rng)
-                                     .map(|p| p + c)
-                                     .take(n_gen)
-                                     .filter(|&p| {
-                                         let d = p.dist(Point(0., 0.));
-                                         r1 <= d && d <= r2
-                                     })
-                                     .filter(|&p| ps.iter().all(|&q| p.dist(q) >= h))
-                                     .next() {
-            ps.push(p);
-            active.push(p);
-        } else {
-            active.remove(i);
-        }
-
-    }
+    println!("Generated {} nodes", ps.len());
 
     let indices = qhull_triangulation(&ps);
+
+    println!("Delaunay triangulation has {} triangles", indices.len());
 
 
     let mut neighbors: Vec<Vec<usize>> = ps.iter().map(|_| vec![]).collect();
