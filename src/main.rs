@@ -51,6 +51,7 @@ struct Args {
     flag_plot: Option<String>,
 }
 
+/// A point in 2D.
 #[derive(Copy, Clone, Debug)]
 pub struct Point(f64, f64);
 
@@ -63,15 +64,22 @@ impl Add for Point {
 }
 
 impl Point {
+    /// Distance between two points.
     fn dist(self, y: Point) -> f64 {
         self.dist_sq(y).sqrt()
     }
 
+    /// The square of the distance between two points.
     fn dist_sq(self, y: Point) -> f64 {
         (self.0 - y.0).powi(2) + (self.1 - y.1).powi(2)
     }
 }
 
+/// Compute the Delaunay triangulation of a set of points by running them through `qhull`.
+///
+/// # Panics
+///
+/// Panics if `qhull` command is not available or fails.
 fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
     let mut process = Command::new("qhull")
                           .stdin(Stdio::piped())
