@@ -1,7 +1,7 @@
 [package]
 authors = ["Norbert Pozar <bertapozar@gmail.com>"]
 name = "annulus_mesh"
-version = "0.1.0"
+version = "0.0.1"
 repository = "https://github.com/rekka/annulus_mesh.git"
 homepage = "https://github.com/rekka/annulus_mesh"
 license = "MIT"

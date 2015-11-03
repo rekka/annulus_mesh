@@ -7,15 +7,11 @@ generating nodes using [Bridson’s algorithm][BridsonVisualization] for
 Poisson-disc sampling, and then creating a [Delaunay
 triangulation][Delaunay] by running the nodes through [qhull].
 
-## Documentation
-
-[Full documentation](https://rekka.github.io/annulus_mesh)
-
 ## Usage
 
 Install the latest stable version of [Rust] from the [website][Rust].
 
-You also need to get [qhull]. This can be installed by the package
+You also need to get [qhull]. This can be installed by a package
 manager:
 
 - _Ubuntu/Debian_: `sudo apt-get install qhull`
