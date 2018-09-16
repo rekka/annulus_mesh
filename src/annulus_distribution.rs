@@ -47,7 +47,7 @@ impl IndependentSample<Point> for AnnulusDist {
     }
 }
 
-struct AnnulusDistIterator<'a, R: 'a> {
+pub struct AnnulusDistIterator<'a, R: 'a> {
     dist: &'a AnnulusDist,
     rng: &'a mut R,
 }

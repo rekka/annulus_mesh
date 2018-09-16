@@ -20,7 +20,7 @@ use std::f64::consts::PI;
 #[allow(unused_imports)]
 use gnuplot::{Figure, Caption, Color, Fix, AxesCommon, PlotOption, DashType, Coordinate, TextColor};
 use rand::SeedableRng;
-use std::io::{Read, Write, Cursor, BufRead};
+use std::io::{Write, Cursor, BufRead};
 use std::process::{Command, Stdio};
 use docopt::Docopt;
 use mersenne_twister::MT19937_64;

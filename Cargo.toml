@@ -10,7 +10,7 @@ documentation = "https://rekka.github.io/annulus_mesh"
 
 [dependencies]
 docopt = "0.6.74"
-gnuplot = "0.0.18"
+gnuplot = "0.0.26"
 mersenne_twister = "0.3.0"
 rand = "0.3.11"
 rustc-serialize = "0.3.16"
