@@ -21,8 +21,8 @@ use docopt::Docopt;
 use gnuplot::{
     AxesCommon, Caption, Color, Coordinate, DashType, Figure, Fix, PlotOption, TextColor,
 };
-use pcg_rand::Pcg32;
 use pcg_rand::seeds::PcgSeeder;
+use pcg_rand::Pcg32;
 use rand::SeedableRng;
 use std::f64::consts::PI;
 use std::io::{BufRead, Cursor, Write};
@@ -151,16 +151,16 @@ fn main() {
 
     let n_fixed = ps.len();
 
-    blue_noise::generate_blue_noise_cull(
+    let mut ps = blue_noise::generate_blue_noise_cull(
         &mut rng,
-        &mut ps,
+        ps,
         h,
         (Point(-r2, -r2), Point(r2, r2)),
         |p| {
             let d = p.dist(Point(0., 0.));
             r1 <= d && d <= r2
         },
-    );
+    ).unwrap();
 
     println!("Generated {} nodes", ps.len());
 

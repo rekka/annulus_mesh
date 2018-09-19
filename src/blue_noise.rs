@@ -5,7 +5,7 @@
 //! SIGGRAPH. Vol. 2007. 2007.
 use super::Point;
 use annulus_distribution::AnnulusDist;
-use rand::{Rng, distributions::Distribution};
+use rand::{distributions::Distribution, Rng};
 
 /// Generate blue noise in a rectange given by the two corners in `bounding_box`. The points have
 /// minimal distance `r`. Seed points can be given in `ps`.
@@ -16,11 +16,11 @@ use rand::{Rng, distributions::Distribution};
 ///
 pub fn generate_blue_noise<R: Rng>(
     rng: &mut R,
-    ps: &mut Vec<Point>,
+    ps: Vec<Point>,
     r: f64,
     bounding_box: (Point, Point),
-) {
-    generate_blue_noise_cull(rng, ps, r, bounding_box, |_| true);
+) -> Vec<Point> {
+    generate_blue_noise_cull(rng, ps, r, bounding_box, |_| true).unwrap()
 }
 
 /// Generate blue noise in a rectange given by the two corners in `bounding_box`. The points have
@@ -33,11 +33,11 @@ pub fn generate_blue_noise<R: Rng>(
 ///
 pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
     rng: &mut R,
-    ps: &mut Vec<Point>,
+    mut ps: Vec<Point>,
     r: f64,
     bounding_box: (Point, Point),
     mut cull: F,
-) {
+) -> Option<Vec<Point>> {
     assert!(r > 0.);
 
     let (p0, p1) = bounding_box;
@@ -49,12 +49,20 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
 
     // generate a random point if no seed point provided
     if ps.is_empty() {
-        let p = Point(
-            ng.xmin + rng.gen_range(0., ng.width),
-            ng.ymin + rng.gen_range(0., ng.height),
-        );
-        ps.push(p);
-        // FIXME: This should be culled, right?
+        let p = (0..1000)
+            .map(|_| {
+                Point(
+                    ng.xmin + rng.gen_range(0., ng.width),
+                    ng.ymin + rng.gen_range(0., ng.height),
+                )
+            }).filter(|p| cull(*p))
+            .next();
+
+        if let Some(p) = p {
+            ps.push(p);
+        } else {
+            return None;
+        }
     }
 
     // fill the neighbor grid by the points provided
@@ -95,6 +103,8 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
             active.swap_remove(i);
         }
     }
+
+    Some(ps)
 }
 
 /// Data structure for efficiently checking neighborhood particles.
@@ -248,9 +258,32 @@ mod tests {
     #[test]
     fn test_generate_blue_noise() {
         let mut rng = ::rand::thread_rng();
-        let mut ps = vec![];
-        generate_blue_noise(&mut rng, &mut ps, 0.125, (Point(-1., -2.), Point(3., 4.)));
+        let ps = vec![];
+        let ps = generate_blue_noise(&mut rng, ps, 0.125, (Point(-1., -2.), Point(3., 4.)));
 
         assert!(!ps.is_empty());
+    }
+
+    #[test]
+    fn test_generate_blue_noise_cull() {
+        for _ in 0..100 {
+            let mut rng = ::rand::thread_rng();
+            let ps = vec![];
+            let ps = generate_blue_noise_cull(
+                &mut rng,
+                ps,
+                0.25,
+                (Point(-1., -2.), Point(3., 4.)),
+                |p| p.0 <= 0.,
+            ).unwrap();
+
+            assert!(!ps.is_empty());
+
+            for (i, &p) in ps.iter().enumerate() {
+                assert!(p.0 >= -1. && p.0 <= 3. && p.1 >= -2. && p.1 <= 4.);
+                // Cull test.
+                assert!(p.0 <= 0., "Point {:?}, index {}, not culled", p, i);
+            }
+        }
     }
 }
