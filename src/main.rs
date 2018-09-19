@@ -8,23 +8,25 @@
 //!
 //! Uses [qhull](http://qhull.org/) to generate a Delaunay triangulation.
 extern crate docopt;
-extern crate rand;
-extern crate rustc_serialize;
 extern crate gnuplot;
 extern crate mersenne_twister;
+extern crate rand;
+extern crate rustc_serialize;
 
 mod annulus_distribution;
 pub mod blue_noise;
 
-use std::f64::consts::PI;
-#[allow(unused_imports)]
-use gnuplot::{Figure, Caption, Color, Fix, AxesCommon, PlotOption, DashType, Coordinate, TextColor};
-use rand::SeedableRng;
-use std::io::{Write, Cursor, BufRead};
-use std::process::{Command, Stdio};
 use docopt::Docopt;
+#[allow(unused_imports)]
+use gnuplot::{
+    AxesCommon, Caption, Color, Coordinate, DashType, Figure, Fix, PlotOption, TextColor,
+};
 use mersenne_twister::MT19937_64;
+use rand::SeedableRng;
+use std::f64::consts::PI;
+use std::io::{BufRead, Cursor, Write};
 use std::ops::Add;
+use std::process::{Command, Stdio};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -82,12 +84,12 @@ impl Point {
 /// Panics if `qhull` command is not available or fails.
 fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
     let mut process = Command::new("qhull")
-                          .stdin(Stdio::piped())
-                          .stdout(Stdio::piped())
-                          .arg("d")
-                          .arg("i")
-                          .spawn()
-                          .unwrap_or_else(|e| panic!("couldn't spawn qhull: {:?}", e));
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .arg("d")
+        .arg("i")
+        .spawn()
+        .unwrap_or_else(|e| panic!("couldn't spawn qhull: {:?}", e));
 
     if let Some(ref mut out) = process.stdin {
         writeln!(out, "2\n{}", ps.len()).unwrap();
@@ -108,7 +110,10 @@ fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
 
     for line in lines {
         let s = line.unwrap();
-        let poly: Vec<usize> = s.split_whitespace().map(|e| e.parse::<usize>().unwrap()).collect();
+        let poly: Vec<usize> = s
+            .split_whitespace()
+            .map(|e| e.parse::<usize>().unwrap())
+            .collect();
         res.push(poly);
     }
 
@@ -118,8 +123,8 @@ fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                         .and_then(|d| d.version(Some(VERSION.to_string())).decode())
-                         .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.version(Some(VERSION.to_string())).decode())
+        .unwrap_or_else(|e| e.exit());
 
     let seed: u64 = 0;
     let mut rng: MT19937_64 = SeedableRng::from_seed(seed);
@@ -141,25 +146,24 @@ fn main() {
         }
     }
 
-
     let n_fixed = ps.len();
 
-
-    blue_noise::generate_blue_noise_cull(&mut rng,
-                                         &mut ps,
-                                         h,
-                                         (Point(-r2, -r2), Point(r2, r2)),
-                                         |p| {
-                                             let d = p.dist(Point(0., 0.));
-                                             r1 <= d && d <= r2
-                                         });
+    blue_noise::generate_blue_noise_cull(
+        &mut rng,
+        &mut ps,
+        h,
+        (Point(-r2, -r2), Point(r2, r2)),
+        |p| {
+            let d = p.dist(Point(0., 0.));
+            r1 <= d && d <= r2
+        },
+    );
 
     println!("Generated {} nodes", ps.len());
 
     let indices = qhull_triangulation(&ps);
 
     println!("Delaunay triangulation has {} triangles", indices.len());
-
 
     let mut neighbors: Vec<Vec<usize>> = ps.iter().map(|_| vec![]).collect();
     for poly in &indices {
@@ -212,14 +216,20 @@ fn main() {
             let axes = fg.axes2d();
             axes.set_aspect_ratio(Fix(1.));
             for poly in indices {
-                axes.lines(poly.iter().cycle().take(poly.len() + 1).map(|&i| ps[i as usize].0),
-                           poly.iter().cycle().take(poly.len() + 1).map(|&i| ps[i as usize].1),
-                           &[]);
+                axes.lines(
+                    poly.iter()
+                        .cycle()
+                        .take(poly.len() + 1)
+                        .map(|&i| ps[i as usize].0),
+                    poly.iter()
+                        .cycle()
+                        .take(poly.len() + 1)
+                        .map(|&i| ps[i as usize].1),
+                    &[],
+                );
             }
         }
 
-
         fg.show();
     }
-
 }

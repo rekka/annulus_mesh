@@ -1,9 +1,9 @@
 //! Implementation of a uniform distribuition of points on a two-dimensional
 //! annulus.
+use rand::distributions::{IndependentSample, Sample};
 use rand::{Closed01, Rng};
-use rand::distributions::{Sample, IndependentSample};
-pub use Point;
 use std::f64::consts::PI;
+pub use Point;
 
 /// The uniform distribution of 2D points on an annulus `{x: r_1 <= |x| <= r_2}`.
 pub struct AnnulusDist {
@@ -69,9 +69,14 @@ mod tests {
         let r1 = 12.;
         let r2 = 58.;
 
-        assert!(AnnulusDist::new(r1, r2).ind_iter(&mut ::rand::thread_rng()).take(1000).all(|p| {
-            let d = p.dist(Point(0., 0.));
-            r1 <= d && d <= r2
-        }));
+        assert!(
+            AnnulusDist::new(r1, r2)
+                .ind_iter(&mut ::rand::thread_rng())
+                .take(1000)
+                .all(|p| {
+                    let d = p.dist(Point(0., 0.));
+                    r1 <= d && d <= r2
+                })
+        );
     }
 }

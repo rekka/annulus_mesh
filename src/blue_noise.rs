@@ -4,8 +4,8 @@
 //! Bridson, Robert. "Fast Poisson disk sampling in arbitrary dimensions." ACM
 //! SIGGRAPH. Vol. 2007. 2007.
 use super::Point;
-use rand::Rng;
 use annulus_distribution::AnnulusDist;
+use rand::Rng;
 
 /// Generate blue noise in a rectange given by the two corners in `bounding_box`. The points have
 /// minimal distance `r`. Seed points can be given in `ps`.
@@ -14,10 +14,12 @@ use annulus_distribution::AnnulusDist;
 ///
 /// Panics if `r <= 0`. Might panic if the distance of seed points in `ps` is less than `r`.
 ///
-pub fn generate_blue_noise<R: Rng>(rng: &mut R,
-                                   ps: &mut Vec<Point>,
-                                   r: f64,
-                                   bounding_box: (Point, Point)) {
+pub fn generate_blue_noise<R: Rng>(
+    rng: &mut R,
+    ps: &mut Vec<Point>,
+    r: f64,
+    bounding_box: (Point, Point),
+) {
     generate_blue_noise_cull(rng, ps, r, bounding_box, |_| true);
 }
 
@@ -29,12 +31,13 @@ pub fn generate_blue_noise<R: Rng>(rng: &mut R,
 ///
 /// Panics if `r <= 0`. Might panic if the distance of seed points in `ps` is less than `r`.
 ///
-pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(rng: &mut R,
-                                                                 ps: &mut Vec<Point>,
-                                                                 r: f64,
-                                                                 bounding_box: (Point, Point),
-                                                                 mut cull: F) {
-
+pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
+    rng: &mut R,
+    ps: &mut Vec<Point>,
+    r: f64,
+    bounding_box: (Point, Point),
+    mut cull: F,
+) {
     assert!(r > 0.);
 
     let (p0, p1) = bounding_box;
@@ -46,8 +49,10 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(rng: &mut R,
 
     // generate a random point if no seed point provided
     if ps.is_empty() {
-        let p = Point(ng.xmin + rng.gen_range(0., ng.width),
-                      ng.ymin + rng.gen_range(0., ng.height));
+        let p = Point(
+            ng.xmin + rng.gen_range(0., ng.width),
+            ng.ymin + rng.gen_range(0., ng.height),
+        );
         ps.push(p);
     }
 
@@ -72,14 +77,14 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(rng: &mut R,
         // box, cull them if necessary, and select the first one that is further than r
         // away from
         // all previous points (if such a point exists)
-        if let Some(p) = annulus_dist.ind_iter(rng)
-                                     .map(|p| p + c)
-                                     .take(n_gen)
-                                     .filter(|&p| ng.is_within(p) && cull(p))
-                                     .filter(|&p| {
-                                         ng.neighbor_iter(p).all(|k| p.dist(ps[k as usize]) >= r)
-                                     })
-                                     .next() {
+        if let Some(p) = annulus_dist
+            .ind_iter(rng)
+            .map(|p| p + c)
+            .take(n_gen)
+            .filter(|&p| ng.is_within(p) && cull(p))
+            .filter(|&p| ng.neighbor_iter(p).all(|k| p.dist(ps[k as usize]) >= r))
+            .next()
+        {
             // store the generated neighbor
             ng.push(p, ps.len() as i32);
             ps.push(p);
@@ -88,7 +93,6 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(rng: &mut R,
             // no admissible neighbor generated, make point inactive
             active.swap_remove(i);
         }
-
     }
 }
 
@@ -138,8 +142,10 @@ impl NeighborGrid {
     /// Check if the point is withing the bounding box.
     fn is_within(&self, p: Point) -> bool {
         let Point(x, y) = p;
-        self.xmin <= x && x <= self.xmin + self.width && self.ymin <= y &&
-        y <= self.ymin + self.height
+        self.xmin <= x
+            && x <= self.xmin + self.width
+            && self.ymin <= y
+            && y <= self.ymin + self.height
     }
 
     fn get_coord(&self, p: Point) -> (usize, usize) {
@@ -182,7 +188,7 @@ impl NeighborGrid {
 /// Iterator over a grid neighborhood of radius 2 that returns indices in non-empty cells.
 impl<'a> NeighborIterator<'a> {
     fn next_inter(&mut self) -> Option<i32> {
-        use std::cmp::{min, max};
+        use std::cmp::{max, min};
         let ui = min(self.i + 2, self.ng.nx - 1);
         let uj = min(self.j + 2, self.ng.ny - 1);
         if self.cj > uj {
@@ -211,13 +217,12 @@ impl<'a> Iterator for NeighborIterator<'a> {
         }
         None
     }
-
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::NeighborGrid;
+    use super::*;
     use Point;
 
     #[test]
@@ -228,8 +233,10 @@ mod tests {
         ng.push(Point(1., 1.), 1);
         ng.push(Point(0.9, 0.99), 2);
 
-        assert_eq!(ng.neighbor_iter(Point(0.3, 0.4)).collect::<Vec<_>>(),
-                   vec![0, 2]);
+        assert_eq!(
+            ng.neighbor_iter(Point(0.3, 0.4)).collect::<Vec<_>>(),
+            vec![0, 2]
+        );
     }
 
     #[test]
