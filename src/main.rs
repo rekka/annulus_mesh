@@ -9,7 +9,7 @@
 //! Uses [qhull](http://qhull.org/) to generate a Delaunay triangulation.
 extern crate docopt;
 extern crate gnuplot;
-extern crate mersenne_twister;
+extern crate pcg_rand;
 extern crate rand;
 extern crate rustc_serialize;
 
@@ -21,7 +21,8 @@ use docopt::Docopt;
 use gnuplot::{
     AxesCommon, Caption, Color, Coordinate, DashType, Figure, Fix, PlotOption, TextColor,
 };
-use mersenne_twister::MT19937_64;
+use pcg_rand::Pcg32;
+use pcg_rand::seeds::PcgSeeder;
 use rand::SeedableRng;
 use std::f64::consts::PI;
 use std::io::{BufRead, Cursor, Write};
@@ -128,8 +129,8 @@ fn main() {
         .and_then(|d| d.version(Some(VERSION.to_string())).decode())
         .unwrap_or_else(|e| e.exit());
 
-    let seed: u64 = 0;
-    let mut rng: MT19937_64 = SeedableRng::from_seed(seed);
+    let seed: u64 = 1;
+    let mut rng = Pcg32::from_seed(PcgSeeder::seed(seed));
 
     let mut ps = vec![];
 

@@ -5,7 +5,7 @@
 //! SIGGRAPH. Vol. 2007. 2007.
 use super::Point;
 use annulus_distribution::AnnulusDist;
-use rand::Rng;
+use rand::{Rng, distributions::Distribution};
 
 /// Generate blue noise in a rectange given by the two corners in `bounding_box`. The points have
 /// minimal distance `r`. Seed points can be given in `ps`.
@@ -54,6 +54,7 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
             ng.ymin + rng.gen_range(0., ng.height),
         );
         ps.push(p);
+        // FIXME: This should be culled, right?
     }
 
     // fill the neighbor grid by the points provided
@@ -78,7 +79,7 @@ pub fn generate_blue_noise_cull<R: Rng, F: FnMut(Point) -> bool>(
         // away from
         // all previous points (if such a point exists)
         if let Some(p) = annulus_dist
-            .ind_iter(rng)
+            .sample_iter(rng)
             .map(|p| p + c)
             .take(n_gen)
             .filter(|&p| ng.is_within(p) && cull(p))
@@ -139,7 +140,7 @@ impl NeighborGrid {
         }
     }
 
-    /// Check if the point is withing the bounding box.
+    /// Check if the point is within the bounding box.
     fn is_within(&self, p: Point) -> bool {
         let Point(x, y) = p;
         self.xmin <= x

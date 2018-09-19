@@ -1,7 +1,7 @@
 //! Implementation of a uniform distribuition of points on a two-dimensional
 //! annulus.
-use rand::distributions::{IndependentSample, Sample};
-use rand::{Closed01, Rng};
+use rand::distributions::Distribution;
+use rand::Rng;
 use std::f64::consts::PI;
 pub use Point;
 
@@ -22,41 +22,17 @@ impl AnnulusDist {
             r2_sq: r2 * r2,
         }
     }
-
-    /// Iterator over independent samples of this distribution.
-    pub fn ind_iter<'a, R: Rng>(&'a self, rng: &'a mut R) -> AnnulusDistIterator<'a, R> {
-        AnnulusDistIterator {
-            dist: self,
-            rng: rng,
-        }
-    }
 }
 
-impl Sample<Point> for AnnulusDist {
-    fn sample<R: Rng>(&mut self, rng: &mut R) -> Point {
-        self.ind_sample(rng)
-    }
-}
-
-impl IndependentSample<Point> for AnnulusDist {
-    fn ind_sample<R: Rng>(&self, rng: &mut R) -> Point {
-        let Closed01(t) = rng.gen::<Closed01<f64>>();
-        let r = (self.r1_sq + t * (self.r2_sq - self.r1_sq)).sqrt();
+impl Distribution<Point> for AnnulusDist {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Point {
+        // For points to be uniformly distributed in the annulus, the area of the disk with radius
+        // equal to the distance of the point from the origin is distributed uniformly between r₁²
+        // and r₂².
+        let r = (self.r1_sq + rng.gen::<f64>() * (self.r2_sq - self.r1_sq)).sqrt();
+        // The angle is uniform between 0 and 2π.
         let (y, x) = (2. * PI * rng.gen::<f64>()).sin_cos();
         Point(r * x, r * y)
-    }
-}
-
-pub struct AnnulusDistIterator<'a, R: 'a> {
-    dist: &'a AnnulusDist,
-    rng: &'a mut R,
-}
-
-impl<'a, R: 'a + Rng> Iterator for AnnulusDistIterator<'a, R> {
-    type Item = Point;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        Some(self.dist.ind_sample(self.rng))
     }
 }
 
@@ -71,7 +47,7 @@ mod tests {
 
         assert!(
             AnnulusDist::new(r1, r2)
-                .ind_iter(&mut ::rand::thread_rng())
+                .sample_iter(&mut ::rand::thread_rng())
                 .take(1000)
                 .all(|p| {
                     let d = p.dist(Point(0., 0.));
