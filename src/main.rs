@@ -39,6 +39,7 @@ Usage: annulus_mesh [options]
 Options:
     -r INNER        Inner radius [default: 0.2]
     -d DIST         Point distance [default: 0.2]
+    -l NUM          Laplace smoothing steps [default: 1]
     -h, --help      Print help
     --plot FILE     Output mesh plot
     --no-show       Do not plot anything
@@ -49,6 +50,7 @@ Options:
 struct Args {
     flag_d: f64,
     flag_r: f64,
+    flag_l: u32,
     flag_no_show: bool,
     flag_plot: Option<String>,
 }
@@ -179,7 +181,7 @@ fn main() {
     }
 
     // Laplace smoothing
-    let n_laplace_step = 1;
+    let n_laplace_step = args.flag_l;
 
     let laplace_eps = 1.0e-3;
 
