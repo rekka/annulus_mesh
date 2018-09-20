@@ -7,6 +7,8 @@ generating nodes using [Bridson’s algorithm][BridsonVisualization] for
 Poisson-disc sampling, and then creating a [Delaunay
 triangulation][Delaunay].
 
+![Example](d=0.1-r=0.2-l=0.svg)
+
 ## Usage
 
 Install the latest stable version of [Rust] from the [website][Rust].
