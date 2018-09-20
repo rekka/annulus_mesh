@@ -5,13 +5,12 @@
 //! SIGGRAPH. Vol. 2007. 2007.
 //!
 //! See also [Visualizing Algorithms](http://bost.ocks.org/mike/algorithms/).
-//!
-//! Uses [qhull](http://qhull.org/) to generate a Delaunay triangulation.
 extern crate docopt;
 extern crate gnuplot;
 extern crate pcg_rand;
 extern crate rand;
 extern crate rustc_serialize;
+extern crate delaunator;
 
 mod annulus_distribution;
 pub mod blue_noise;
@@ -25,9 +24,7 @@ use pcg_rand::seeds::PcgSeeder;
 use pcg_rand::Pcg32;
 use rand::SeedableRng;
 use std::f64::consts::PI;
-use std::io::{BufRead, Cursor, Write};
-use std::ops::Add;
-use std::process::{Command, Stdio};
+use std::ops::{Add, Div};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -68,6 +65,14 @@ impl Add for Point {
     }
 }
 
+impl Div<f64> for Point {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self {
+        Point(self.0 / rhs, self.1 / rhs)
+    }
+}
+
 impl Point {
     /// Distance between two points.
     fn dist(self, y: Point) -> f64 {
@@ -80,48 +85,17 @@ impl Point {
     }
 }
 
-/// Compute the Delaunay triangulation of a set of points by running them through `qhull`.
+/// Compute the Delaunay triangulation of a set of points.
 ///
 /// # Panics
 ///
-/// Panics if `qhull` command is not available or fails.
-fn qhull_triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
-    let mut process = Command::new("qhull")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .arg("d")
-        .arg("i")
-        .spawn()
-        .unwrap_or_else(|e| panic!("couldn't spawn qhull: {:?}", e));
+/// Panics if a triangulation does not exist.
+fn triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
+    let ps: Vec<_> = ps.iter().map(|&Point(x, y)| delaunator::Point { x, y }).collect();
 
-    if let Some(ref mut out) = process.stdin {
-        writeln!(out, "2\n{}", ps.len()).unwrap();
+    let tri = delaunator::triangulate(&ps).expect("No triangulation exists.");
 
-        for &Point(x, y) in ps {
-            writeln!(out, "{} {}", x, y).unwrap();
-        }
-    }
-
-    // process.stdout.unwrap().read_to_string(&mut s);
-    let output = process.wait_with_output().unwrap();
-
-    let mut lines = Cursor::new(output.stdout).lines();
-
-    let n = lines.next().unwrap().unwrap().parse::<usize>().unwrap();
-
-    let mut res = vec![];
-
-    for line in lines {
-        let s = line.unwrap();
-        let poly: Vec<usize> = s
-            .split_whitespace()
-            .map(|e| e.parse::<usize>().unwrap())
-            .collect();
-        res.push(poly);
-    }
-
-    assert_eq!(res.len(), n);
-    res
+    tri.triangles.chunks(3).map(|c| c.to_owned()).collect::<Vec<_>>()
 }
 
 fn main() {
@@ -164,7 +138,10 @@ fn main() {
 
     println!("Generated {} nodes", ps.len());
 
-    let indices = qhull_triangulation(&ps);
+    let indices = triangulation(&ps);
+
+    // Cull triangles outside of the annulus by testing if the barycenter lies outside.
+    let indices = indices.into_iter().filter(|t| (t.iter().map(|&i| ps[i]).fold(Point(0., 0.), Add::add) / t.len() as f64).dist(Point(0., 0.)) >= r1).collect::<Vec<_>>();
 
     println!("Delaunay triangulation has {} triangles", indices.len());
 
