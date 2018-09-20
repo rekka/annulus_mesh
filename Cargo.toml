@@ -9,9 +9,10 @@ readme = "README.md"
 documentation = "https://rekka.github.io/annulus_mesh"
 
 [dependencies]
-docopt = "0.6.74"
+docopt = "1"
 gnuplot = "0.0.26"
 rand = "0.5"
 pcg_rand = "0.9"
-rustc-serialize = "0.3.16"
+serde = "1"
+serde_derive = "1"
 delaunator = "0.2"

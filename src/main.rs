@@ -9,7 +9,8 @@ extern crate docopt;
 extern crate gnuplot;
 extern crate pcg_rand;
 extern crate rand;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate delaunator;
 
 mod annulus_distribution;
@@ -44,7 +45,7 @@ Options:
     --version       Print version
 ";
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 struct Args {
     flag_d: f64,
     flag_r: f64,
@@ -100,7 +101,7 @@ fn triangulation(ps: &[Point]) -> Vec<Vec<usize>> {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.version(Some(VERSION.to_string())).decode())
+        .and_then(|d| d.version(Some(VERSION.to_string())).deserialize())
         .unwrap_or_else(|e| e.exit());
 
     let seed: u64 = 1;
